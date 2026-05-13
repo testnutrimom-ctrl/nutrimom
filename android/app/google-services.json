@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "649718639075",
+    "project_id": "nutrimom-6aac2",
+    "storage_bucket": "nutrimom-6aac2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:649718639075:android:1c09d571d419527fc158d6",
+        "android_client_info": {
+          "package_name": "com.example.nutrimom"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbee4lfUzcZI_X-Yi7weH4R_Yp-Rh1sJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
