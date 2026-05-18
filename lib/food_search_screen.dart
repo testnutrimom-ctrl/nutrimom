@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'foods_to_avoid_screen.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class FoodSearchScreen extends StatefulWidget {
   const FoodSearchScreen({super.key});
@@ -14,46 +16,64 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   bool _isLoading = false;
   bool _hasSearched = false;
 
-  final List<Map<String, dynamic>> _mockFoods = [
-    {'name': 'Banana', 'calories': 89, 'protein': 1.1, 'carbs': 23.0, 'fat': 0.3, 'serving': '1 medium (118g)'},
-    {'name': 'Chicken Breast', 'calories': 165, 'protein': 31.0, 'carbs': 0.0, 'fat': 3.6, 'serving': '100g'},
-    {'name': 'Brown Rice', 'calories': 216, 'protein': 5.0, 'carbs': 45.0, 'fat': 1.8, 'serving': '1 cup cooked'},
-    {'name': 'Whole Milk', 'calories': 149, 'protein': 8.0, 'carbs': 12.0, 'fat': 8.0, 'serving': '1 cup (244ml)'},
-    {'name': 'Egg', 'calories': 72, 'protein': 6.0, 'carbs': 0.4, 'fat': 5.0, 'serving': '1 large'},
-    {'name': 'Spinach', 'calories': 7, 'protein': 0.9, 'carbs': 1.1, 'fat': 0.1, 'serving': '1 cup raw (30g)'},
-    {'name': 'Salmon', 'calories': 208, 'protein': 20.0, 'carbs': 0.0, 'fat': 13.0, 'serving': '100g'},
-    {'name': 'Greek Yogurt', 'calories': 100, 'protein': 17.0, 'carbs': 6.0, 'fat': 0.7, 'serving': '170g'},
-    {'name': 'Oatmeal', 'calories': 158, 'protein': 6.0, 'carbs': 27.0, 'fat': 3.2, 'serving': '1 cup cooked'},
-    {'name': 'Avocado', 'calories': 234, 'protein': 2.9, 'carbs': 12.0, 'fat': 21.0, 'serving': '1 medium'},
-    {'name': 'Lentils', 'calories': 230, 'protein': 18.0, 'carbs': 40.0, 'fat': 0.8, 'serving': '1 cup cooked'},
-    {'name': 'Sweet Potato', 'calories': 103, 'protein': 2.3, 'carbs': 24.0, 'fat': 0.1, 'serving': '1 medium'},
-    {'name': 'Almonds', 'calories': 164, 'protein': 6.0, 'carbs': 6.0, 'fat': 14.0, 'serving': '1 oz (28g)'},
-    {'name': 'Orange', 'calories': 62, 'protein': 1.2, 'carbs': 15.0, 'fat': 0.2, 'serving': '1 medium'},
-    {'name': 'Broccoli', 'calories': 55, 'protein': 3.7, 'carbs': 11.0, 'fat': 0.6, 'serving': '1 cup cooked'},
-  ];
-
-  void _searchFood(String query) {
-    if (query.isEmpty) {
-      setState(() {
-        _results = [];
-        _hasSearched = false;
-      });
-      return;
-    }
+Future<void> _searchFood(String query) async {
+  if (query.isEmpty) {
     setState(() {
-      _isLoading = true;
-      _hasSearched = true;
+      _results = [];
+      _hasSearched = false;
     });
-    Future.delayed(const Duration(milliseconds: 300), () {
-      final filtered = _mockFoods.where((food) =>
-          food['name'].toString().toLowerCase().contains(query.toLowerCase())).toList();
-      setState(() {
-        _results = filtered;
-        _isLoading = false;
-      });
-    });
+    return;
   }
-
+  setState(() {
+    _isLoading = true;
+    _hasSearched = true;
+  });
+  try {
+    final response = await http.get(Uri.parse(
+      'https://api.nal.usda.gov/fdc/v1/foods/search?query=$query&api_key=o22hd3kIVgH9N5ioLMc3djREpsEujeQSNHRIMUMd&pageSize=10',
+    ));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final foods = data['foods'] as List;
+setState(() {
+  final seen = <String>{};
+  _results = foods.map((food) {
+    final nutrients = food['foodNutrients'] as List;
+    double getnutrient(int id) {
+      final n = nutrients.firstWhere(
+        (n) => n['nutrientId'] == id,
+        orElse: () => {'value': 0},
+      );
+      return (n['value'] as num?)?.toDouble() ?? 0;
+    }
+    // Get a clean name
+    String name = food['description'] ?? 'Unknown';
+    name = name.split(',').first.trim();
+    name = name.toLowerCase().split(' ').map((word) =>
+        word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : word
+    ).join(' ');
+    return {
+      'name': name,
+      'calories': getnutrient(1008).round(),
+      'protein': getnutrient(1003),
+      'carbs': getnutrient(1005),
+      'fat': getnutrient(1004),
+      'serving': '100g',
+    };
+  }).where((food) {
+    // Remove duplicates by name
+    final name = food['name'] as String;
+    if (seen.contains(name)) return false;
+    seen.add(name);
+    return (food['calories'] as int) > 0;
+  }).toList();
+  _isLoading = false;
+});
+    }
+  } catch (e) {
+    setState(() => _isLoading = false);
+  }
+}
   void _showQuantityDialog(Map<String, dynamic> food) {
     int quantity = 1;
     showModalBottomSheet(
@@ -221,7 +241,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
             child: TextField(
               controller: _searchController,
               autofocus: true,
-              onChanged: _searchFood,
+              onChanged: (value) => _searchFood(value),
               decoration: InputDecoration(
                 hintText: 'Search for a food...',
                 prefixIcon: const Icon(Icons.search, color: Color(0xFF2196F3)),
