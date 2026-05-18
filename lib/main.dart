@@ -41,11 +41,57 @@ class NutriMomApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const WelcomeScreen(),
+      home: const AuthWrapper(),
     );
   }
 }
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(color: Color(0xFF2196F3)),
+            ),
+          );
+        }
+        if (snapshot.hasData && snapshot.data != null) {
+          return FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(snapshot.data!.uid)
+                .get(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF2196F3)),
+                  ),
+                );
+              }
+              if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                return HomeScreen(
+                  name: userData['name'] ?? '',
+                  mode: userData['mode'] ?? 'pregnant',
+                  stage: userData['stage'] ?? '1',
+                  weight: (userData['weight'] as num?)?.toDouble() ?? 0,
+                );
+              }
+              return OnboardingScreen(userId: snapshot.data!.uid);
+            },
+          );
+        }
+        return const WelcomeScreen();
+      },
+    );
+  }
+}
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -419,7 +465,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-final List<Map<String, dynamic>> _loggedFoods = [];
+List<Map<String, dynamic>> _loggedFoods = [];
 int _waterGlasses = 0;
 final List<Map<String, dynamic>> _weightLog = [];
 
@@ -431,8 +477,47 @@ final List<Map<String, dynamic>> _weightLog = [];
   }
 
   int get _caloriesConsumed {
-    return _loggedFoods.fold(0, (sum, food) => sum + (food['calories'] as int));
+  return _loggedFoods.fold(0, (sum, food) => sum + (food['calories'] as int));
+}
+
+@override
+void initState() {
+  super.initState();
+  _loadFoods();
+}
+
+Future<void> _loadFoods() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final today = DateTime.now();
+    final dateStr = '${today.year}-${today.month}-${today.day}';
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('foodLogs')
+        .doc(dateStr)
+        .collection('meals')
+        .get();
+    setState(() {
+      _loggedFoods = snapshot.docs.map((doc) => doc.data()).toList();
+    });
   }
+}
+
+Future<void> _saveFood(Map<String, dynamic> food) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final today = DateTime.now();
+    final dateStr = '${today.year}-${today.month}-${today.day}';
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('foodLogs')
+        .doc(dateStr)
+        .collection('meals')
+        .add(food);
+  }
+}
 void _showWaterDialog() {
   showModalBottomSheet(
     context: context,
@@ -756,10 +841,11 @@ _buildNutritionCard(),
             MaterialPageRoute(builder: (context) => const FoodSearchScreen()),
           );
           if (food != null) {
-            setState(() {
-              _loggedFoods.add(food);
-            });
-          }
+  setState(() {
+    _loggedFoods.add(food);
+  });
+  await _saveFood(food);
+}
         },
         backgroundColor: const Color(0xFF2196F3),
         icon: const Icon(Icons.add, color: Colors.white),
