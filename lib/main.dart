@@ -480,10 +480,13 @@ final List<Map<String, dynamic>> _weightLog = [];
   return _loggedFoods.fold(0, (sum, food) => sum + (food['calories'] as int));
 }
 
+
 @override
 void initState() {
   super.initState();
   _loadFoods();
+  _loadWater();
+  _loadWeight();
 }
 
 Future<void> _loadFoods() async {
@@ -516,6 +519,66 @@ Future<void> _saveFood(Map<String, dynamic> food) async {
         .doc(dateStr)
         .collection('meals')
         .add(food);
+  }
+}
+Future<void> _loadWater() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final today = DateTime.now();
+    final dateStr = '${today.year}-${today.month}-${today.day}';
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('waterLogs')
+        .doc(dateStr)
+        .get();
+    if (doc.exists) {
+      setState(() {
+        _waterGlasses = doc.data()?['glasses'] ?? 0;
+      });
+    }
+  }
+}
+
+Future<void> _saveWater() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final today = DateTime.now();
+    final dateStr = '${today.year}-${today.month}-${today.day}';
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('waterLogs')
+        .doc(dateStr)
+        .set({'glasses': _waterGlasses});
+  }
+}
+
+Future<void> _loadWeight() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('weightLogs')
+        .orderBy('date', descending: true)
+        .get();
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        _weightLog.addAll(snapshot.docs.map((doc) => doc.data()).toList());
+      });
+    }
+  }
+}
+
+Future<void> _saveWeight(Map<String, dynamic> entry) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('weightLogs')
+        .add(entry);
   }
 }
 void _showWaterDialog() {
@@ -563,12 +626,13 @@ void _showWaterDialog() {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          if (_waterGlasses > 0) {
-                            setModalState(() {});
-                            setState(() => _waterGlasses--);
-                          }
-                        },
+                       onPressed: () {
+  if (_waterGlasses > 0) {
+    setModalState(() {});
+ setState(() => _waterGlasses--);
+_saveWater();
+  }
+},
                         icon: const Icon(Icons.remove, color: Color(0xFF2196F3)),
                         label: const Text('Remove', style: TextStyle(color: Color(0xFF2196F3))),
                         style: OutlinedButton.styleFrom(
@@ -582,11 +646,12 @@ void _showWaterDialog() {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          if (_waterGlasses < 8) {
-                            setModalState(() {});
-                            setState(() => _waterGlasses++);
-                          }
-                        },
+  if (_waterGlasses < 8) {
+    setModalState(() {});
+    setState(() => _waterGlasses++);
+    _saveWater();
+  }
+},
                         icon: const Icon(Icons.add, color: Colors.white),
                         label: const Text('Add Glass', style: TextStyle(color: Colors.white)),
                         style: ElevatedButton.styleFrom(
@@ -676,17 +741,19 @@ void _showWeightDialog() {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (weightController.text.isNotEmpty) {
-                    final now = DateTime.now();
-                    setState(() {
-                      _weightLog.add({
-                        'weight': double.tryParse(weightController.text) ?? 0,
-                        'date': '${now.day}/${now.month}/${now.year}',
-                      });
-                    });
-                    Navigator.pop(context);
-                  }
-                },
+  if (weightController.text.isNotEmpty) {
+    final now = DateTime.now();
+final entry = {
+  'weight': double.tryParse(weightController.text) ?? 0,
+  'date': '${now.day}/${now.month}/${now.year}',
+};
+setState(() {
+  _weightLog.add(entry);
+});
+_saveWeight(entry);
+Navigator.pop(context);
+  }
+},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2196F3),
                   foregroundColor: Colors.white,
