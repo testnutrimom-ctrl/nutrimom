@@ -6,43 +6,60 @@ import 'firebase_options.dart';
 import 'food_search_screen.dart';
 import 'foods_to_avoid_screen.dart';
 import 'auth_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // Test Firestore write
-  try {
-    await FirebaseFirestore.instance
-        .collection('test')
-        .doc('test')
-        .set({'hello': 'world'});
-    print('TEST WRITE SUCCESS');
-  } catch (e) {
-    print('TEST WRITE FAILED: $e');
-  }
   runApp(const NutriMomApp());
 }
 
-class NutriMomApp extends StatelessWidget {
+class NutriMomApp extends StatefulWidget {
   const NutriMomApp({super.key});
 
   @override
+  State<NutriMomApp> createState() => _NutriMomAppState();
+
+  static _NutriMomAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_NutriMomAppState>();
+}
+
+class _NutriMomAppState extends State<NutriMomApp> {
+  Locale _locale = const Locale('en');
+
+  void setLocale(Locale locale) {
+    setState(() => _locale = locale);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NutriMom',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2196F3),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
-      home: const AuthWrapper(),
-    );
+   return MaterialApp(
+  title: 'NutriMom',
+  debugShowCheckedModeBanner: false,
+  locale: _locale,
+  localizationsDelegates: const [
+  AppLocalizations.delegate,
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+],
+  supportedLocales: const [
+    Locale('en'),
+    Locale('hu'),
+  ],
+  theme: ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xFF2196F3),
+      brightness: Brightness.light,
+    ),
+    useMaterial3: true,
+    fontFamily: 'Roboto',
+  ),
+  home: const AuthWrapper(),
+);
   }
 }
 class AuthWrapper extends StatelessWidget {
@@ -779,12 +796,14 @@ Navigator.pop(context);
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Hi, ${widget.name}! 👋',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2196F3))),
-            Text(
-              widget.mode == 'pregnant' ? 'Trimester ${widget.stage}' : 'Breastfeeding',
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
-            ),
+            Text(AppLocalizations.of(context).hiName(widget.name),
+    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2196F3))),
+Text(
+  widget.mode == 'pregnant' 
+      ? AppLocalizations.of(context).trimesterLabel(widget.stage)
+      : AppLocalizations.of(context).breastfeeding,
+  style: const TextStyle(fontSize: 13, color: Colors.grey),
+),
           ],
         ),
         actions: [
@@ -800,6 +819,14 @@ Navigator.pop(context);
           ),
         ),
       );
+    },
+  ),
+  IconButton(
+    icon: const Icon(Icons.language, color: Color(0xFF2196F3)),
+    onPressed: () {
+      final current = Localizations.localeOf(context).languageCode;
+      final newLocale = current == 'en' ? const Locale('hu') : const Locale('en');
+      NutriMomApp.of(context)?.setLocale(newLocale);
     },
   ),
   IconButton(
@@ -828,13 +855,13 @@ Navigator.pop(context);
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('💧', style: TextStyle(fontSize: 28)),
-        const SizedBox(height: 8),
-        const Text('Water', style: TextStyle(color: Colors.grey, fontSize: 13)),
+const Text('💧', style: TextStyle(fontSize: 28)),
+const SizedBox(height: 8),
+Text(AppLocalizations.of(context).water, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         const SizedBox(height: 4),
         Text('$_waterGlasses / 8',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2196F3))),
-        const Text('glasses', style: TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(AppLocalizations.of(context).glasses, style: const TextStyle(color: Colors.grey, fontSize: 12)),
         const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
@@ -866,12 +893,12 @@ Navigator.pop(context);
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('⚖️', style: TextStyle(fontSize: 28)),
-        const SizedBox(height: 8),
-        const Text('Weight', style: TextStyle(color: Colors.grey, fontSize: 13)),
+const SizedBox(height: 8),
+Text(AppLocalizations.of(context).weight, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         const SizedBox(height: 4),
         Text('${_weightLog.isEmpty ? widget.weight : _weightLog.last['weight']}kg',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2196F3))),
-        const Text('current', style: TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(AppLocalizations.of(context).current, style: const TextStyle(color: Colors.grey, fontSize: 12)),
         const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
@@ -893,11 +920,10 @@ Navigator.pop(context);
               ],
             ),
             const SizedBox(height: 16),
-            _buildNutritionCard(),
-            const SizedBox(height: 16),
-           _buildCalorieCard(),
-const SizedBox(height: 16),
 _buildNutritionCard(),
+const SizedBox(height: 16),
+_buildMealsCard(),
+const SizedBox(height: 80),
           ],
         ),
       ),
@@ -937,11 +963,11 @@ _buildNutritionCard(),
       ),
       child: Column(
         children: [
-          const Text('Daily Calories', style: TextStyle(color: Colors.white70, fontSize: 14)),
+       Text(AppLocalizations.of(context).dailyCalories, style: const TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 8),
           Text('$_caloriesConsumed',
               style: const TextStyle(color: Colors.white, fontSize: 52, fontWeight: FontWeight.bold)),
-          Text('of $_calorieGoal kcal goal', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          Text('of $_calorieGoal ${AppLocalizations.of(context).kcalGoal}', style: const TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 20),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
@@ -956,10 +982,10 @@ _buildNutritionCard(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$_caloriesConsumed kcal consumed',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              Text('${remaining > 0 ? remaining : 0} kcal remaining',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+             Text('$_caloriesConsumed ${AppLocalizations.of(context).kcalConsumed}',
+    style: const TextStyle(color: Colors.white70, fontSize: 12)),
+Text('${remaining > 0 ? remaining : 0} ${AppLocalizations.of(context).kcalRemaining}',
+    style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ),
         ],
@@ -1001,7 +1027,7 @@ _buildNutritionCard(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Nutrition Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+         Text(AppLocalizations.of(context).nutritionSummary, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           _buildNutrientRow('Protein', totalProtein, 70, Colors.orange),
           const SizedBox(height: 10),
@@ -1040,7 +1066,55 @@ _buildNutritionCard(),
       ],
     );
   }
-
+Widget _buildMealsCard() {
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [BoxShadow(color: Colors.grey.shade100, blurRadius: 10, offset: const Offset(0, 4))],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(AppLocalizations.of(context).todaysMeals,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        _loggedFoods.isEmpty
+            ? Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.restaurant_outlined, size: 48, color: Colors.grey.shade300),
+                    const SizedBox(height: 8),
+                    Text(AppLocalizations.of(context).noMealsLogged,
+                        style: const TextStyle(color: Colors.grey)),
+                    Text(AppLocalizations.of(context).tapToLogFood,
+                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _loggedFoods.length,
+                itemBuilder: (context, index) {
+                  final food = _loggedFoods[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(food['name'],
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(food['serving'],
+                        style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    trailing: Text('${food['calories']} kcal',
+                        style: const TextStyle(
+                            color: Color(0xFF2196F3), fontWeight: FontWeight.bold)),
+                  );
+                },
+              ),
+      ],
+    ),
+  );
+}
   Widget _buildFoodsWarningBanner() {
   return GestureDetector(
     onTap: () {
