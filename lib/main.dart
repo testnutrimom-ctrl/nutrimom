@@ -8,6 +8,7 @@ import 'foods_to_avoid_screen.dart';
 import 'auth_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_localizations.dart';
+import 'settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -830,9 +831,21 @@ Text(
     },
   ),
   IconButton(
-    icon: const Icon(Icons.person_outline, color: Color(0xFF2196F3)),
-    onPressed: () {},
-  ),
+  icon: const Icon(Icons.person_outline, color: Color(0xFF2196F3)),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsScreen(
+          name: widget.name,
+          mode: widget.mode,
+          stage: widget.stage,
+          weight: widget.weight,
+        ),
+      ),
+    );
+  },
+),
 ],
       ),
       body: SingleChildScrollView(
