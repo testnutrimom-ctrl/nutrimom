@@ -9,12 +9,14 @@ import 'auth_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_localizations.dart';
 import 'settings_screen.dart';
+import 'notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService.initialize();
   runApp(const NutriMomApp());
 }
 
@@ -37,30 +39,30 @@ class _NutriMomAppState extends State<NutriMomApp> {
 
   @override
   Widget build(BuildContext context) {
-   return MaterialApp(
-  title: 'NutriMom',
-  debugShowCheckedModeBanner: false,
-  locale: _locale,
-  localizationsDelegates: const [
-  AppLocalizations.delegate,
-  GlobalMaterialLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-  GlobalCupertinoLocalizations.delegate,
-],
-  supportedLocales: const [
-    Locale('en'),
-    Locale('hu'),
-  ],
-  theme: ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF2196F3),
-      brightness: Brightness.light,
-    ),
-    useMaterial3: true,
-    fontFamily: 'Roboto',
-  ),
-  home: const AuthWrapper(),
-);
+    return MaterialApp(
+      title: 'NutriMom',
+      debugShowCheckedModeBanner: false,
+      locale: _locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('hu'),
+      ],
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2196F3),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        fontFamily: 'Roboto',
+      ),
+      home: const AuthWrapper(),
+    );
   }
 }
 class AuthWrapper extends StatelessWidget {
