@@ -809,7 +809,14 @@ Text(
 ),
           ],
         ),
-        actions: [
+actions: [
+  IconButton(
+    icon: const Icon(Icons.notifications_outlined, color: Color(0xFF2196F3)),
+    onPressed: () async {
+      final isHungarian = Localizations.localeOf(context).languageCode == 'hu';
+      await NotificationService.showWaterReminder(isHungarian: isHungarian);
+    },
+  ),
   IconButton(
     icon: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
     onPressed: () {
@@ -833,21 +840,21 @@ Text(
     },
   ),
   IconButton(
-  icon: const Icon(Icons.person_outline, color: Color(0xFF2196F3)),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SettingsScreen(
-          name: widget.name,
-          mode: widget.mode,
-          stage: widget.stage,
-          weight: widget.weight,
+    icon: const Icon(Icons.person_outline, color: Color(0xFF2196F3)),
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SettingsScreen(
+            name: widget.name,
+            mode: widget.mode,
+            stage: widget.stage,
+            weight: widget.weight,
+          ),
         ),
-      ),
-    );
-  },
-),
+      );
+    },
+  ),
 ],
       ),
       body: SingleChildScrollView(
