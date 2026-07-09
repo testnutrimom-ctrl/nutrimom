@@ -10,6 +10,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_localizations.dart';
 import 'settings_screen.dart';
 import 'notification_service.dart';
+import 'numi_widget.dart';
+import 'numi_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -487,6 +489,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
 List<Map<String, dynamic>> _loggedFoods = [];
 int _waterGlasses = 0;
+int _numiPoints = 0;
 final List<Map<String, dynamic>> _weightLog = [];
 
   int get _calorieGoal {
@@ -504,9 +507,14 @@ final List<Map<String, dynamic>> _weightLog = [];
 @override
 void initState() {
   super.initState();
-  _loadFoods();
-  _loadWater();
-  _loadWeight();
+  _loadAllData();
+}
+
+Future<void> _loadAllData() async {
+  await _loadFoods();
+  await _loadWater();
+  await _loadWeight();
+  await _loadNumiPoints();
 }
 
 Future<void> _loadFoods() async {
@@ -590,7 +598,20 @@ Future<void> _loadWeight() async {
     }
   }
 }
+Future<void> _loadNumiPoints() async {
+  final caloriesOnTrack = _caloriesConsumed >= (_calorieGoal * 0.8) &&
+      _caloriesConsumed <= (_calorieGoal * 1.1);
+  final waterGoalMet = _waterGlasses >= 8;
 
+  await NumiService.checkAndAwardPoints(
+    caloriesOnTrack: caloriesOnTrack,
+    waterGoalMet: waterGoalMet,
+    nutrientsTracked: _loggedFoods.length >= 3,
+  );
+
+  final points = await NumiService.getPoints();
+  setState(() => _numiPoints = points);
+}
 Future<void> _saveWeight(Map<String, dynamic> entry) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user != null) {
@@ -862,6 +883,8 @@ actions: [
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildNumiCard(),
+    const SizedBox(height: 16),
             _buildCalorieCard(),
             const SizedBox(height: 16),
             Row(
@@ -969,6 +992,31 @@ const SizedBox(height: 80),
     );
   }
 
+  Widget _buildNumiCard() {
+  final caloriesOnTrack = _caloriesConsumed >= (_calorieGoal * 0.8) &&
+      _caloriesConsumed <= (_calorieGoal * 1.1);
+  final waterGoalMet = _waterGlasses >= 8;
+  final isOverfed = _caloriesConsumed > (_calorieGoal * 1.2);
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+            color: Colors.grey.shade100,
+            blurRadius: 10,
+            offset: const Offset(0, 4))
+      ],
+    ),
+    child: NumiWidget(
+      points: _numiPoints,
+      isOverfed: isOverfed,
+    ),
+  );
+}
   Widget _buildCalorieCard() {
     final progress = (_caloriesConsumed / _calorieGoal).clamp(0.0, 1.0);
     final remaining = _calorieGoal - _caloriesConsumed;
